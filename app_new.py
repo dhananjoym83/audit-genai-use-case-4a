@@ -1,0 +1,242 @@
+import streamlit as st  
+import pandas as pd  
+import glob, os, zipfile
+from Create_planning import * 
+from Create_disclosures import *
+import datetime
+from io import BytesIO 
+from PIL import Image
+
+image = Image.open('KPMG.png')
+pi_image = Image.open('logo.png')
+st.set_page_config(page_title="KPMG USECASE 4a", page_icon=pi_image,  layout="wide")
+
+# Define function to process uploaded files  
+def process_files(Trial_file, CFS_file, PFS_file, output_folder):  
+
+    with st.spinner('Processing files...'):
+        tb = pd.read_excel(Trial_file)
+        cfs_bytes = BytesIO(CFS_file.read())
+        pfs_bytes = BytesIO(PFS_file.read())
+
+        print("Reading Files ...")
+        # processing data from uploaded files  
+        CFSstore = create_store(load_file(cfs_bytes))
+        PFSstore = create_store(load_file(pfs_bytes))
+        print("Loaded Documents ...")
+        print('Calculating Variance ...')
+        print('Generating Comments ..')
+        Balance_Sheet, Income_Statement  = process_sheets(tb)
+        Balance_Sheet['Comment on Variance'] = Balance_Sheet.apply(generate_comment, axis=1)
+        Income_Statement['Comment on Variance'] = Income_Statement.apply(generate_comment, axis=1)
+        print('Extracting Ratio Information ...')
+        lr_chunk = generate_ratio_chunk(tb, LRratios, LRcomponents, LRformulas)
+        sr_chunk = generate_ratio_chunk(tb, SRratios, SRcomponents, SRformulas)
+        pr_chunk = generate_ratio_chunk(tb, PRratios, PRcomponents, PRformulas)
+        lr_ratios = json.loads(extract_to_json(lr_chunk, LRratios, LRcomponents))
+        sr_ratios = json.loads(extract_to_json(sr_chunk, SRratios, SRcomponents))
+        pr_ratios = json.loads(extract_to_json(pr_chunk, PRratios, PRcomponents))
+        lr_ratios_df = pd.DataFrame.from_dict(lr_ratios)
+        sr_ratios_df = pd.DataFrame.from_dict(sr_ratios)
+        pr_ratios_df = pd.DataFrame.from_dict(pr_ratios)
+        ratios_df = pd.concat([lr_ratios_df, sr_ratios_df, pr_ratios_df])
+        ratios_df.index = ratios_df.index.astype(str)
+
+        # Find the closest matches for each desired label in the index of ratios_df
+        matched_row_labels = [get_close_matches(label, ratios_df.index, n=1, cutoff=0.6) for label in desired_row_labels]
+        matched_row_labels = [match[0] for match in matched_row_labels if match]  # Remove empty matches
+        # Extract the rows with the matched labels
+        extracted_df = ratios_df.loc[matched_row_labels]
+        # extracting components
+        ratios_df = ratios_df.reset_index()
+        ratios_df.to_json(output_folder + 'Ratios.json')
+
+        write_to_execl(Balance_Sheet, Income_Statement, extracted_df, output_folder)
+
+        
+        status = "The Files are processed successfully"
+        print(status)
+      
+    return status  
+  
+
+def generate_checklists(FS, output_folder):
+    
+
+    status = "The Files are processed successfully"
+    print(status)
+
+    return status
+
+def map_uploaded_files(uploaded_files):
+    trial_file, CFS_file, PFS_file = None, None, None
+    for file in uploaded_files:
+        if file.name.lower().endswith('.xlsx') or file.name.lower().endswith('.xls'):
+            trial_file = file
+        elif file.name.lower().startswith('cfs'):
+            CFS_file = file
+        elif file.name.lower().startswith('pfs'):
+            PFS_file = file
+    return trial_file, CFS_file, PFS_file
+
+# Define Streamlit app  
+def app():
+    st.markdown("""
+    <style>
+        .st-tabs__container .st-tabs__header {
+            font-size: 400px; /* Increase the font size of tab headings */
+            font-weight: bold; /* Make tab headings bold */
+        }
+        .st-tabs__container .st-tabs__content {
+            font-size: 380px; /* Increase the font size of tab content */
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    global output_folder
+    # Set page title  
+    #st.image(image, width=200)
+    col1, col2 = st.columns([6, 1])
+    with col1:
+        st.header("Planning Analytics and Disclosure Checklist")  
+    col2.image(image, width=200)
+    # Set app heading  
+    #st.header("Planning Analytics and Disclosure Checklist")  
+    tab1, tab2 = st.tabs(["Planning Analytics", "Disclosure Checklist"])
+
+    
+    with tab1: 
+        
+        # st.subheader("LEADSHEETS GENERATOR")
+        # Allow user to upload multiple files  
+        #trial_file = st.file_uploader("Upload Trial Balance File", accept_multiple_files=False)  
+        #CFS_file = st.file_uploader("Upload Current Year Financial Statement File", accept_multiple_files=False)
+        #PFS_file = st.file_uploader("Upload Previous Year Financial Statement File", accept_multiple_files=False) 
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            organization_name = st.text_input("Enter the organization's name:")
+            uploaded_files = st.file_uploader("Upload Trial Balance, Current Year and Previous Year Financial Statement Files", accept_multiple_files=True)
+        trial_file, CFS_file, PFS_file = map_uploaded_files(uploaded_files)
+        
+        if st.button("Generate Analytics Workbook"): 
+            # If files have been uploaded, process them
+            if trial_file and CFS_file and PFS_file:
+                if "output_folder" not in st.session_state:  
+                    now = datetime.datetime.now()  
+                    st.session_state.output_folder = f"..\\Output\\result_{now.strftime('%Y-%m-%d_%H-%M-%S')}\\"
+
+                output_folder=st.session_state.output_folder
+                # Call function to process uploaded files  
+                processed_data = process_files(trial_file, CFS_file, PFS_file, output_folder)  
+                
+                # Display processed data  
+                st.write(f"Processed status: {processed_data}")  
+                
+                # Create zip file of all leadsheet output files  
+                zip_file = output_folder+'Analytics.zip'
+                zip_file_name = 'Analytics.zip'
+                lead_folder = output_folder+"Analytics"   
+
+                # create a ZipFile object with the specified filename  
+                zf = zipfile.ZipFile(zip_file, "w")  
+                
+                # loop through all the files in the leadsheet directory  
+                for filename in os.listdir(lead_folder):  
+                    # construct the full file path  
+                    file_path = os.path.join(lead_folder, filename)  
+                    # add the file to the zip file  
+                    zf.write(file_path, filename) 
+
+                zf.close()
+                
+                # Allow user to download zip file  
+                if os.path.exists(zip_file):  
+                    with open(zip_file, 'rb') as f:  
+                        csv = f.read()  
+                    st.download_button(  
+                        label="Download all output files as zip",  
+                        data=zip,  
+                        file_name=zip_file_name,  
+                        mime="application/zip"  
+                    )  
+        with col2:  
+            st.write("""
+1. Analyze financial statements: Compare prior and current period financial data, including balance sheets and income statements, to identify differences.
+
+2. Generate analytical workpapers: Input trial balance and financial statements to create planning analytics, highlighting amount and percentage variances.
+
+3. Automate commentary: Examine current and prior year financial statements to suggest explanations for variances in the Commentary for Variance column.
+
+4. Review for accuracy: Cross-check total balances in the Analytic work paper with financial statements, highlighting any discrepancies or inaccuracies.
+
+5. Perform ratio analysis: Calculate financial ratios using predefined formulas, analyze the client's financial performance, and generate a detailed commentary.
+       """)
+
+    with tab2: 
+        # Switch to Testing Matrices Generator screen
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            organization_name = st.text_input("Enter the Organization's name:")
+            # Allow user to upload Substantive Procedure document and PPE Memorandum document  
+            FS = st.file_uploader("Upload Financial Statement", accept_multiple_files=False)  
+
+        # Enable a button named Create Testing Matrices  
+        if st.button("Create Disclosure Checklist"):  
+            # If files have been uploaded, create testing matrices  
+            if FS:
+
+                output_folder=st.session_state.output_folder
+                print(output_folder) 
+                generate_checklists(FS, output_folder)
+                if output_folder is None:  
+                    print("Disclosure list not created")
+                    st.write("Disclosures do not exists")
+                else: 
+                # Call function to create testing matrices  
+
+                    # Create zip file of all testing matrices output files  
+                    test_zip_file = output_folder+'Disclosures.zip'  
+                    test_zip_file_name = 'Disclosures.zip'  
+                    matrices_folder = output_folder
+
+                    # create a ZipFile object with the specified filename  
+                    test_zf = zipfile.ZipFile(test_zip_file, "w")  
+
+                    # loop through all the files in the testing matrices directory  
+                    for filename in os.listdir(matrices_folder):  
+                        # construct the full file path  
+                        file_path = os.path.join(matrices_folder, filename)  
+                        # add the file to the zip file  
+                        test_zf.write(file_path, filename)  
+
+                    test_zf.close()  
+
+                    # Allow user to download zip file  
+                    if os.path.exists(test_zip_file):  
+                        with open(test_zip_file, 'rb') as f:  
+                            csv = f.read()  
+                        st.download_button(  
+                            label="Download all testing matrices output files as zip",  
+                            data=zip,  
+                            file_name=test_zip_file_name,  
+                            mime="application/zip"  
+                        )  
+        with col2:    
+            st.write("""
+1. Identify FASB disclosure requirements: The solution will analyze the Financial Accounting Standards Board (FASB) Accounting Standards Codification to identify all necessary disclosure requirements.
+
+2. Generate Accounting Disclosure Checklist: Based on FASB guidelines, the solution will create a comprehensive Accounting Disclosure Checklist to ensure compliance.
+
+3. Compare Checklist with Financial Statements: The solution will cross-reference the generated checklist with the current and previous year's financial statements, ensuring all requirements are met.
+
+4. Update Responses for Each Item: The solution will automatically update the responses for each item on the Accounting Disclosure Checklist, streamlining the review process.
+
+5. Facilitate Compliance and Reporting: By automating the identification and comparison of disclosure requirements, the solution enhances financial statement accuracy and simplifies regulatory compliance.
+        """)
+# Run Streamlit app  
+if __name__ == "__main__":  
+    app()

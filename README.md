@@ -1,1 +1,1 @@
-# audit-genai-use-case-4a
+# audit-genai-hackathon3-uc4a

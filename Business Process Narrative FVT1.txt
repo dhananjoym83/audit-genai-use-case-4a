@@ -1,0 +1,67 @@
+
+
+
+Purpose: This is a call transcript for a Sales process walkthrough meeting/call with Lockheed Martin’s executives, that can be used as an input to create flowchart for the Sales Business Process.
+Location: At Lockheed Martin’s headquarters, inside a conference room; SAP application administrator and Auditor - technology senior associate call in virtually.
+
+List of names of all the participants from Entity (Company) and Audit Firm with their designations in bullet points.
+• Jaxson Baker, Audit in-charge 
+• Jasmine Ramirez, Audit senior manager 
+• Miles Carter, Audit engagement partner 
+• Landon Garcia, Audit technology assurance senior associate 
+• Avery Hernandez, Audit new associate 
+• Evelyn Morgan, Lockheed Martin sales associate 
+• Solomon Jones, Lockheed Martin Credit Manager 
+• Kyle Thomas, Lockheed Martin Warehouse Manager 
+• Abby Barber, Lockheed Martin Shipping Department Head 
+• Ethan Harris, Lockheed Martin treasury clerk 
+• Lila Gonzales, Lockheed Martin credit analyst 
+• Eliana Collins, Lockheed Martin sales representative 
+• Aurora Flores, Lockheed Martin SAP application administrator
+
+
+
+Process Description 1: Customer Credit Approval Process
+1. When a new customer completes the credit application form, Lila, the credit analyst, enters the customer financial information into SAP STM and uses that information to develop a suggested credit limit in line with company policy and sends it to Solomon, Lockheed Martin’s Credit manager for approval. If the application is to enhance the credit limit for existing customers, Lila reviews the payment history and assesses whether to modify the credit limit or not.
+2. Solomon reviews the suggested credit limit and:
+- If the credit can be granted, he marks the credit limit as approved in SAP STM.
+- Else, credit will be denied, and the order will be cancelled.
+Risk: 
+- The credit analyst may not have the necessary expertise to assess the creditworthiness of the customer.
+- The credit manager may not have the necessary expertise to approve or deny credit.
+Control: 
+- The credit analyst and credit manager should be trained on how to assess creditworthiness and approve or deny credit.
+- The credit analyst and credit manager should follow the company's credit policy.
+
+Process Description 2: Sales Order Entry Process
+1. Eliana, the sales representative, confirms whether the customer is a new or existing customer. For a new customer, Lila, the credit analyst, reviews the customer’s financial information to decide on whether to approve the credit or not.
+2. Eliana takes the order by phone and sends it to Evelyn, the sales associate.
+3. Evelyn enters the sales order into the SAP STM system, including the customer’s name, order date, and order details such as the SKU and quantities.
+4. SAP STM generates a sale order number. In this case, SO1014.
+5. SAP STM computes the subtotal using the quantity per customer order, price per pricing master file, and sales tax using the relevant tax rate and adds them together to calculate total sales.
+6. SAP STM performs a credit check and determines whether the order is within the customer’s credit limit.
+7. If the order is within the customer’s credit limit, SAP STM approves the sales order.
+Risk: 
+- The sales representative may not have the necessary expertise to determine whether the customer is new or existing.
+- The sales associate may not have the necessary expertise to enter the sales order into the SAP STM system.
+- The SAP STM system may not be configured correctly to perform the credit check.
+Control: 
+- The sales representative and sales associate should be trained on how to determine whether the customer is new or existing and how to enter the sales order into the SAP STM system.
+- The SAP STM system should be configured correctly to perform the credit check.
+
+Process Description 3: Order Execution Process
+1. Once the sales order is approved, SAP STM sends it to the Inventory Application.
+2. The Inventory application identifies the ordered items on hand and then places other items on backorder and sends this data back to SAP STM.
+3. Report writer in SAP STM creates a Pre-defined Picking List for items on hand, and a warehouse associate picks these items, scanning each using the RF scanner to update the status as ‘picked.
+4. After all items are picked, SAP STM marks the order as complete.
+5. Abby, the Shipping department head, schedules pickups and generates 2 copies of Bill of Lading (BOL) from the carrier's website. BOL has information such as BOL Date, shipment date, shipping items, delivery type, quantity, SKU, customer name, and customer address.
+6. When loading goods, the shipping department associates scan goods with an RF scanner to update the status to ‘Shipped’ and compare scanned quantity to quantity as per BOL. If information agrees, SAP STM marks the order as Shipped. If the information is not agreeing, the warehouse manager will be alerted and resolve differences before goods leave the warehouse.
+7. The carrier will sign both copies of BOL indicating acceptance of shipment and transfer of ownership and leaves with the items. The carrier will keep one copy of BOL, and the Shipping department files the second copy of BOL.
+Risk: 
+- The warehouse associate may not pick the correct items.
+- The shipping department associates may not scan the goods correctly.
+- The carrier may not deliver the goods to the correct address.
+Control: 
+- The warehouse associate and shipping department associates should be trained on how to pick and scan goods correctly.
+- The carrier should be selected based on their reputation and track record.
+- The Shipping department should verify the delivery address with the customer before shipping the goods.
